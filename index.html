@@ -6,369 +6,176 @@
     <title>Smart Attendance System - Admin</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        :root { 
-            --primary-red: #ff0000; 
-            --dark-bg: #0b0b0b; 
-            --card-bg: #161616; 
-            --glow: 0 0 15px rgba(255, 0, 0, 0.6); 
-        }
-
-        body { 
-            margin: 0; 
-            background-color: var(--dark-bg); 
-            color: white; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
-        }
-
-        .container { 
-            width: 95%; 
-            max-width: 900px; 
-            background: var(--card-bg); 
-            border: 2px solid var(--primary-red); 
-            box-shadow: var(--glow); 
-            overflow: hidden; 
-            display: flex; 
-            flex-direction: column; 
-            border-radius: 8px; 
-            margin: 10px auto;
-        }
-
-        /* --- Login Screen --- */
+        :root { --primary-red: #ff0000; --dark-bg: #0b0b0b; --card-bg: #161616; --glow: 0 0 15px rgba(255, 0, 0, 0.6); }
+        body { margin: 0; background-color: var(--dark-bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { width: 95%; max-width: 900px; background: var(--card-bg); border: 2px solid var(--primary-red); box-shadow: var(--glow); border-radius: 8px; margin: 10px auto; overflow: hidden; display: flex; flex-direction: column; }
         #loginPage { display: flex; flex-wrap: wrap; width: 100%; min-height: 500px; }
-        
-        .login-left { 
-            flex: 1; 
-            min-width: 300px; 
-            padding: 40px; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-        }
-
-        .login-right { 
-            flex: 1; 
-            min-width: 300px; 
-            background: linear-gradient(45deg, #000, var(--primary-red)); 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center; 
-            text-align: center; 
-            padding: 40px; 
-            clip-path: polygon(15% 0%, 100% 0%, 100% 100%, 0% 100%); 
-        }
-
+        .login-left { flex: 1; min-width: 300px; padding: 40px; display: flex; flex-direction: column; justify-content: center; }
+        .login-right { flex: 1; min-width: 300px; background: linear-gradient(45deg, #000, var(--primary-red)); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px; clip-path: polygon(15% 0%, 100% 0%, 100% 100%, 0% 100%); }
         .inputbox { position: relative; margin-bottom: 25px; border-bottom: 2px solid white; }
         .inputbox input { width: 100%; background: transparent; border: none; outline: none; color: white; padding: 12px 5px; font-size: 16px; }
-
-        .btn-glow { 
-            background: transparent; 
-            border: 2px solid var(--primary-red); 
-            color: white; 
-            padding: 12px; 
-            border-radius: 30px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            transition: 0.3s; 
-            box-shadow: var(--glow); 
-        }
+        .btn-glow { background: transparent; border: 2px solid var(--primary-red); color: white; padding: 12px; border-radius: 30px; cursor: pointer; font-weight: bold; transition: 0.3s; box-shadow: var(--glow); }
         .btn-glow:hover { background: var(--primary-red); box-shadow: 0 0 25px var(--primary-red); }
-
-        /* --- Main Dashboard --- */
         #mainPage { display: none; padding: 15px; flex-direction: column; }
-        
-        .header-nav { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            border-bottom: 2px solid var(--primary-red); 
-            padding-bottom: 10px; 
-            margin-bottom: 15px; 
-        }
-
-        .dashboard-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-            gap: 15px; 
-        }
-
-        .card { 
-            background: rgba(255, 255, 255, 0.05); 
-            padding: 15px; 
-            border-radius: 10px; 
-            border: 1px solid rgba(255, 0, 0, 0.2); 
-        }
-
-        .add-student-container {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .add-student-container .manual-input {
-            flex: 2;
-            min-width: 200px;
-        }
-
-        /* تعديل زر الـ ADD ليكون أحمر */
-        .btn-add {
-            flex: 1;
-            min-width: 100px;
-            background: transparent;
-            border: 2px solid var(--primary-red);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: 0.3s;
-            text-transform: uppercase;
-        }
-
-        .btn-add:hover {
-            background: var(--primary-red);
-            box-shadow: 0 0 15px var(--primary-red);
-        }
-
-        .table-scroll { 
-            width: 100%; 
-            overflow-x: auto; 
-            margin-top: 15px; 
-            -webkit-overflow-scrolling: touch; 
-        }
-        
-        table { width: 100%; border-collapse: collapse; min-width: 500px; text-align: left; }
-        th { background: #800000; padding: 12px; }
+        .header-nav { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary-red); padding-bottom: 10px; margin-bottom: 15px; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .card { background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 10px; border: 1px solid rgba(255, 0, 0, 0.2); }
+        .add-student-container { display: flex; gap: 10px; flex-wrap: wrap; }
+        .manual-input { flex: 2; min-width: 200px; background: #000; color: white; border: 1px solid var(--primary-red); padding: 10px; border-radius: 5px; }
+        .btn-add { flex: 1; min-width: 100px; background: transparent; border: 2px solid var(--primary-red); color: white; cursor: pointer; font-weight: bold; border-radius: 5px; }
+        .table-scroll { width: 100%; overflow-x: auto; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; min-width: 500px; }
+        th { background: #800000; padding: 12px; text-align: left; }
         td { padding: 10px; border-bottom: 1px solid #333; }
-
         .status-absent { color: #ff4d4d; font-weight: bold; }
         .status-present { color: #2ecc71; font-weight: bold; }
-
-        .action-btn { 
-            background: #2ecc71; 
-            border: none; 
-            color: white; 
-            padding: 8px 15px; 
-            border-radius: 5px; 
-            cursor: pointer; 
-            font-size: 14px;
-        }
-
-        select, input[type="file"], .manual-input { 
-            width: 100%; 
-            background: #000; 
-            color: white; 
-            border: 1px solid var(--primary-red); 
-            padding: 10px; 
-            margin-top: 5px; 
-            border-radius: 5px; 
-            box-sizing: border-box; 
-        }
-
-        @media (max-width: 650px) { 
-            .login-right { clip-path: none; order: -1; min-height: 180px; padding: 20px; } 
-            .login-left { padding: 20px; }
-            .container { width: 98%; margin: 5px auto; }
-            .dashboard-grid { grid-template-columns: 1fr; }
-            .btn-glow { width: 100%; }
-        }
+        .action-btn { background: #2ecc71; border: none; color: white; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        select, input[type="file"] { width: 100%; background: #000; color: white; border: 1px solid var(--primary-red); padding: 10px; margin-top: 5px; border-radius: 5px; }
+        @media (max-width: 650px) { .login-right { clip-path: none; order: -1; min-height: 180px; padding: 20px; } }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div id="loginPage">
-            <div class="login-left">
-                <h2 style="text-align: center;">LOGIN</h2>
-                <div class="inputbox"><input type="text" id="username" required placeholder="Username"></div>
-                <div class="inputbox"><input type="password" id="password" required placeholder="Password"></div>
-                <button class="btn-glow" onclick="checkLogin()">Enter</button>
-            </div>
-            <div class="login-right">
-                <h1 style="margin: 0;">SMART</h1>
-                <h2 style="margin: 0; letter-spacing: 3px;">ATTENDANCE</h2>
-                <p>Mr. Moamen Mohamed</p>
-            </div>
+<div class="container">
+    <div id="loginPage">
+        <div class="login-left">
+            <h2 style="text-align: center;">LOGIN</h2>
+            <div class="inputbox"><input type="text" id="username" placeholder="Username"></div>
+            <div class="inputbox"><input type="password" id="password" placeholder="Password"></div>
+            <button class="btn-glow" onclick="checkLogin()">Enter</button>
         </div>
-
-        <div id="mainPage">
-            <div class="header-nav">
-                <span>Smart attendance System</span>
-                <button onclick="location.reload()" style="background:none; border:1px solid red; color:white; cursor:pointer; padding:5px 10px; border-radius:5px;">Logout</button>
-            </div>
-
-            <div class="dashboard-grid">
-                <div class="card">
-                    <label>Select Center:</label>
-                    <select id="centerSelect" onchange="loadCenterData()">
-                        <option value="Smart_Haram">Smart Haram</option>
-                        <option value="Smart_October">Smart October</option>
-                        <option value="Smart_Dokki">Smart Dokki</option>
-                        <option value="Learn_Mohandseen">Learn Mohandseen</option>
-                        <option value="A_One_Haram">A One Haram</option>
-                        <option value="College_Elnady">College Elnady</option>
-                        <option>Smart Downtown</option>
-                        <option>college Horus</option>
-                    </select>
-                </div>
-                <div class="card">
-                    <label>Academic Year:</label>
-                    <select id="gradeSelect" onchange="loadCenterData()">
-                        <option value="2nd_sec">2nd Secondary</option>
-                        <option value="3rd_sec">3rd Secondary</option>
-                    </select>
-                </div>
-                <div class="card" id="setupSection">
-                    <label>Import Students (Excel):</label>
-                    <input type="file" id="excelFile" accept=".xlsx, .xls">
-                </div>
-            </div>
-
-            <div class="card" style="margin-top: 15px;">
-                <div class="add-student-container">
-                    <input type="text" id="newName" class="manual-input" placeholder="Add student name manually">
-                    <button onclick="addNewStudent()" class="btn-add">ADD</button>
-                </div>
-            </div>
-
-            <div class="table-scroll">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Student Name</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="studentsBody"></tbody>
-                </table>
-            </div>
-
-            <div style="margin-top: 20px; display: flex; gap: 10px; padding-bottom: 10px; flex-wrap: wrap;">
-                <button class="btn-glow" onclick="exportToExcel()" style="flex: 2; min-width: 200px;">Download Report</button>
-                <button onclick="resetCenter()" style="flex: 1; min-width: 100px; background:none; border:none; color:#666; cursor:pointer; font-size:11px;">Clear Data</button>
-            </div>
+        <div class="login-right">
+            <h1>SMART</h1>
+            <h2 style="letter-spacing: 3px;">ATTENDANCE</h2>
+            <p>Mr. Moamen Mohamed</p>
         </div>
     </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <div id="mainPage">
+        <div class="header-nav">
+            <span>Smart Cloud System</span>
+            <button onclick="location.reload()" style="background:none; border:1px solid red; color:white; padding:5px 10px; border-radius:5px;">Logout</button>
+        </div>
+        <div class="dashboard-grid">
+            <div class="card">
+                <label>Select Center:</label>
+                <select id="centerSelect" onchange="loadCenterData()">
+                    <option value="Smart_Haram">Smart Haram</option>
+                    <option value="Smart_October">Smart October</option>
+                    <option value="Smart_Dokki">Smart Dokki</option>
+                    <option value="Learn_Mohandseen">Learn Mohandseen</option>
+                </select>
+            </div>
+            <div class="card">
+                <label>Academic Year:</label>
+                <select id="gradeSelect" onchange="loadCenterData()">
+                    <option value="2nd_sec">2nd Secondary</option>
+                    <option value="3rd_sec">3rd Secondary</option>
+                </select>
+            </div>
+            <div class="card">
+                <label>Import Excel:</label>
+                <input type="file" id="excelFile">
+            </div>
+        </div>
+        <div class="card" style="margin-top: 15px;">
+            <div class="add-student-container">
+                <input type="text" id="newName" class="manual-input" placeholder="Manual Name">
+                <button onclick="addNewStudent()" class="btn-add">ADD</button>
+            </div>
+        </div>
+        <div class="table-scroll">
+            <table>
+                <thead><tr><th>Name</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="studentsBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
 <script>
-    // 1. بيانات الربط (انسخيها من Settings -> API في Supabase)
-    const SUPABASE_URL = 'https://your-project-url.supabase.co';
-    const SUPABASE_KEY = 'your-anon-public-key';
-    
-    // بدء اتصال السحاب
-    const supabase = supabasejs.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // --- الربط مع Supabase ---
+    const SUPABASE_URL = 'https://irjlgzgyifeqiolmkjwn.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_AUEngtqQkWx4LZXSPLYSmw_LVdpe4a0';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // 2. دالة جلب البيانات من السحاب وعرضها
-    async function fetchData() {
+    let currentStudents = [];
+
+    async function checkLogin() {
+        if(document.getElementById('username').value === "assistant" && document.getElementById('password').value === "assistant123") {
+            document.getElementById('loginPage').style.display = "none";
+            document.getElementById('mainPage').style.display = "flex";
+            await loadCenterData();
+        } else { alert("Wrong Credentials"); }
+    }
+
+    async function loadCenterData() {
         const center = document.getElementById('centerSelect').value;
         const grade = document.getElementById('gradeSelect').value;
-
-        const { data, error } = await supabase
+        
+        const { data, error } = await _supabase
             .from('students')
             .select('*')
             .eq('center', center)
             .eq('grade', grade);
 
-        if (error) {
-            console.error('Error fetching:', error);
-            return;
+        if (!error) {
+            currentStudents = data;
+            renderTable();
         }
+    }
 
-        const tbody = document.getElementById('studentsBody');
-        tbody.innerHTML = "";
-        data.forEach((student) => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${student.name}</td>
-                <td class="${student.status === 'Present' ? 'status-present' : 'status-absent'}">${student.status}</td>
-                <td>
-                    <button class="action-btn" onclick="markPresent('${student.id}')" 
-                        ${student.status === 'Present' ? 'disabled style="opacity:0.3"' : ''}>
-                        ${student.status === 'Present' ? 'Done' : 'Mark Present'}
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(tr);
+    function renderTable() {
+        const body = document.getElementById('studentsBody');
+        body.innerHTML = "";
+        currentStudents.forEach((st) => {
+            body.innerHTML += `
+                <tr>
+                    <td>${st.name}</td>
+                    <td class="${st.status === 'Present' ? 'status-present' : 'status-absent'}">${st.status}</td>
+                    <td><button class="action-btn" onclick="markPresent('${st.id}')" ${st.status === 'Present' ? 'disabled style="opacity:0.3"' : ''}>Mark</button></td>
+                </tr>`;
         });
     }
 
-    // 3. تسجيل الحضور (تحديث السحاب)
     async function markPresent(id) {
-        const { error } = await supabase
-            .from('students')
-            .update({ status: 'Present' })
-            .eq('id', id);
-
-        if (!error) fetchData(); // تحديث الجدول فوراً عند الجميع
+        await _supabase.from('students').update({ status: 'Present' }).eq('id', id);
+        await loadCenterData();
     }
 
-    // 4. إضافة طالب يدوي (أونلاين)
     async function addNewStudent() {
-        const nameInput = document.getElementById('newName');
-        const name = nameInput.value.trim();
+        const name = document.getElementById('newName').value;
         const center = document.getElementById('centerSelect').value;
         const grade = document.getElementById('gradeSelect').value;
-
         if (name) {
-            const { error } = await supabase
-                .from('students')
-                .insert([{ name, center, grade, status: 'Absent' }]);
-            
-            if (!error) {
-                nameInput.value = "";
-                fetchData();
-            }
+            await _supabase.from('students').insert([{ name, center, grade, status: 'Absent' }]);
+            document.getElementById('newName').value = "";
+            await loadCenterData();
         }
     }
 
-    // 5. رفع ملف إكسيل (أونلاين)
-    document.getElementById('excelFile').addEventListener('change', function(e) {
+    document.getElementById('excelFile').onchange = (e) => {
         const reader = new FileReader();
-        const center = document.getElementById('centerSelect').value;
-        const grade = document.getElementById('gradeSelect').value;
-
-        reader.onload = async (event) => {
-            const data = new Uint8Array(event.target.result);
-            const workbook = XLSX.read(data, {type: 'array'});
-            const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-
-            const newStudents = jsonData.map(row => ({
-                name: row["الاسم"] || row["Name"] || Object.values(row)[0],
+        reader.onload = async (ev) => {
+            const wb = XLSX.read(new Uint8Array(ev.target.result), {type: 'array'});
+            const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+            const center = document.getElementById('centerSelect').value;
+            const grade = document.getElementById('gradeSelect').value;
+            
+            const rows = json.map(r => ({
+                name: r["الاسم"] || Object.values(r)[0],
                 center: center,
                 grade: grade,
                 status: 'Absent'
-            })).filter(s => s.name);
-
-            const { error } = await supabase.from('students').insert(newStudents);
-            if (!error) {
-                alert("تم رفع الأسماء للسحاب بنجاح!");
-                fetchData();
-            } else {
-                alert("حدث خطأ أثناء الرفع");
-            }
+            }));
+            await _supabase.from('students').insert(rows);
+            await loadCenterData();
         };
         reader.readAsArrayBuffer(e.target.files[0]);
-    });
-
-    // تشغيل الجلب عند فتح الصفحة أو تغيير الاختيارات
-    function checkLogin() {
-        if(document.getElementById('username').value === "admin" && document.getElementById('password').value === "123") {
-            document.getElementById('loginPage').style.display = "none";
-            document.getElementById('mainPage').style.display = "flex";
-            fetchData();
-        } else { alert("Wrong!"); }
-    }
+    };
 </script>
 </body>
 </html>
-
