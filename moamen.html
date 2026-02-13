@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Attendance System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        /* الديزاين بتاعك المعدل */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: rgba(34, 33, 33, 0.959);
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+        }
+        .container {
+            position: relative;
+            width: 750px;
+            height: 450px;
+            border: 2px solid red;
+            box-shadow: 0 0 25px red;
+            overflow: hidden;
+            background: #111;
+        }
+        .container .loginform {
+            position: absolute;
+            top: 0;
+            width: 50%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 2;
+        }
+        .loginform.Login {
+            left: 0;
+            padding: 0 40px;
+        }
+        .loginform h2 {
+            font-size: 32px;
+            text-align: center;
+            color: white;
+            margin-bottom: 10px;
+        }
+        .loginform .inputbox {
+            position: relative;
+            width: 90%;
+            height: 50px;
+            margin-top: 25px;
+            color: white;
+        }
+        .inputbox input {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            color: white;
+            font-weight: 600;
+            border-bottom: 2px solid white;
+        }
+        .inputbox label {
+            position: absolute;
+            top: 50%;
+            left: 5px;
+            transform: translateY(-50%);
+            transition: .5s;
+            pointer-events: none;
+        }
+        .inputbox input:focus ~ label,
+        .inputbox input:valid ~ label {
+            top: -5px;
+            color: red;
+            font-size: 12px;
+        }
+        .btn {
+            position: relative;
+            width: 100%;
+            height: 45px;
+            background: transparent;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            border: 2px solid red;
+            overflow: hidden;
+            z-index: 1;
+            margin-top: 30px;
+        }
+        .btn::before {
+            content: "";
+            position: absolute;
+            height: 300%;
+            width: 100%;
+            background: linear-gradient(red, black, red, black);
+            top: -100%;
+            left: 0;
+            z-index: -1;
+            transition: .5s;
+        }
+        .btn:hover:before {
+            top: 0;
+        }
+        .infocontent {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 50%;
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+            z-index: 2;
+        }
+        .infocontent.Login {
+            right: 0;
+            text-align: right;
+            padding: 0 40px;
+        }
+        .container .shape {
+            position: absolute;
+            right: 0;
+            top: -5px;
+            height: 600px;
+            width: 850px;
+            background: linear-gradient(45deg, black, red);
+            transform: rotate(10deg) skewY(40deg);
+            transform-origin: bottom right;
+            z-index: 1;
+        }
+
+        /* ديزاين صفحة السيستم الداخلية (MainPage) */
+        #mainPage {
+            width: 90%;
+            max-width: 1000px;
+            background: #1a1a1a;
+            color: white;
+            padding: 30px;
+            border: 2px solid red;
+            box-shadow: 0 0 20px red;
+            display: none; /* مخفية في البداية */
+            flex-direction: column;
+        }
+        .header-sys {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid red;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        select, .custom-btn {
+            background: transparent;
+            color: white;
+            border: 1px solid red;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 12px;
+            text-align: left;
+        }
+        th { background: #900; }
+        .status-absent { color: #ff4d4d; font-weight: bold; }
+        .status-present { color: #2ecc71; font-weight: bold; }
+        .p-btn { background: #2ecc71; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="loginContainer">
+        <div class="shape"></div>
+        
+        <div class="loginform Login">
+            <h2>LOGIN</h2>
+            <div class="inputbox">
+                <input type="text" id="username" required>
+                <label>Username</label>
+            </div>
+            <div class="inputbox">
+                <input type="password" id="password" required>
+                <label>Password</label>
+            </div>
+            <button class="btn" onclick="checkLogin()">Login</button>
+        </div>
+
+        <div class="infocontent Login">
+            <h2>SMART <br>ATTENDANCE</h2>
+            <p>Expert Management System</p>
+        </div>
+    </div>
+
+    <div id="mainPage">
+        <div class="header-sys">
+            <div>
+                <strong>Center: </strong>
+                <select id="centerSelect" onchange="loadCenterData()">
+                    <option value="Smart_Haram">Smart Haram</option>
+                    <option value="Smart_October">Smart October</option>
+                    <option value="Smart_Dokki">Smart Dokki</option>
+                    <option value="Learn_Mohandseen">Learn Mohandseen</option>
+                    <option value="A_One_Haram">A One Haram</option>
+                    <option value="College_Elnady">College Elnady</option>
+                </select>
+            </div>
+            <button class="custom-btn" onclick="location.reload()">Logout</button>
+        </div>
+
+        <div id="setupSection" style="text-align: center; border: 1px dashed red; padding: 20px; margin-bottom: 20px;">
+            <p>Upload Student List (Excel column must be: <b>الاسم</b>)</p>
+            <input type="file" id="excelFile" accept=".xlsx, .xls">
+        </div>
+
+        <div id="attendanceContent">
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="newName" placeholder="Add student name" style="background:#000; color:#fff; border:1px solid red; padding:8px;">
+                <button class="custom-btn" onclick="addNewStudent()">+ Add Student</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                        <th>Manage</th>
+                    </tr>
+                </thead>
+                <tbody id="studentsBody"></tbody>
+            </table>
+
+            <button class="btn" style="margin-top:20px; border-radius: 5px;" onclick="exportToExcel()">📥 Download Excel Report</button>
+            <p style="font-size: 11px; margin-top: 15px; color: #666; cursor: pointer;" onclick="resetCenter()">Clear center data</p>
+        </div>
+    </div>
+
+<script>
+    let currentStudents = [];
+    let sessionAttendance = {};
+
+    function checkLogin() {
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+        if(u === "admin" && p === "123") {
+            document.getElementById('loginContainer').style.display = "none";
+            document.getElementById('mainPage').style.display = "flex";
+            loadCenterData();
+        } else { alert("Access Denied!"); }
+    }
+
+    function loadCenterData() {
+        const center = document.getElementById('centerSelect').value;
+        const savedData = localStorage.getItem(center);
+        sessionAttendance = {}; 
+
+        if (savedData) {
+            currentStudents = JSON.parse(savedData);
+            document.getElementById('setupSection').style.display = "none";
+            currentStudents.forEach((name, index) => {
+                sessionAttendance[index] = { "Name": name, "Status": "Absent", "Date": new Date().toLocaleDateString(), "Center": center };
+            });
+            renderTable();
+        } else {
+            currentStudents = [];
+            document.getElementById('setupSection').style.display = "block";
+            renderTable();
+        }
+    }
+
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const data = new Uint8Array(event.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+            currentStudents = jsonData.map(row => row["الاسم"]).filter(n => n);
+            saveAndRefresh();
+        };
+        reader.readAsArrayBuffer(e.target.files[0]);
+    });
+
+    function addNewStudent() {
+        const nameInput = document.getElementById('newName');
+        if (nameInput.value.trim() !== "") {
+            currentStudents.push(nameInput.value.trim());
+            nameInput.value = "";
+            saveAndRefresh();
+        }
+    }
+
+    function saveAndRefresh() {
+        localStorage.setItem(document.getElementById('centerSelect').value, JSON.stringify(currentStudents));
+        loadCenterData();
+    }
+
+    function renderTable() {
+        const body = document.getElementById('studentsBody');
+        body.innerHTML = "";
+        currentStudents.forEach((name, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${name}</td>
+                <td id="status-${index}" class="status-absent">Absent</td>
+                <td><button id="btn-p-${index}" class="p-btn" onclick="markPresent(${index})">Mark Present</button></td>
+                <td><button style="background:none; border:none; color:grey; cursor:pointer;" onclick="deleteStudent(${index})">Delete</button></td>
+            `;
+            body.appendChild(tr);
+        });
+    }
+
+    function markPresent(index) {
+        sessionAttendance[index].Status = "Present";
+        const cell = document.getElementById(`status-${index}`);
+        cell.innerText = "Present";
+        cell.className = "status-present";
+        document.getElementById(`btn-p-${index}`).disabled = true;
+        document.getElementById(`btn-p-${index}`).innerText = "✓ Done";
+        document.getElementById(`btn-p-${index}`).style.opacity = "0.5";
+    }
+
+    function exportToExcel() {
+        const center = document.getElementById('centerSelect').value;
+        const ws = XLSX.utils.json_to_sheet(Object.values(sessionAttendance));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Attendance");
+        XLSX.writeFile(wb, `${center}_${new Date().toLocaleDateString()}.xlsx`);
+    }
+
+    function deleteStudent(index) {
+        if(confirm("Delete student?")) {
+            currentStudents.splice(index, 1);
+            saveAndRefresh();
+        }
+    }
+
+    function resetCenter() {
+        if(confirm("Clear ALL names for this center?")) {
+            localStorage.removeItem(document.getElementById('centerSelect').value);
+            loadCenterData();
+        }
+    }
+</script>
+</body>
+</html>
