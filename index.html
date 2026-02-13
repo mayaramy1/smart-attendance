@@ -36,6 +36,7 @@
             display: flex; 
             flex-direction: column; 
             border-radius: 8px; 
+            margin: 10px auto;
         }
 
         /* --- Login Screen --- */
@@ -104,7 +105,43 @@
             border: 1px solid rgba(255, 0, 0, 0.2); 
         }
 
-        .table-scroll { width: 100%; overflow-x: auto; margin-top: 15px; }
+        .add-student-container {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .add-student-container .manual-input {
+            flex: 2;
+            min-width: 200px;
+        }
+
+        /* تعديل زر الـ ADD ليكون أحمر */
+        .btn-add {
+            flex: 1;
+            min-width: 100px;
+            background: transparent;
+            border: 2px solid var(--primary-red);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            text-transform: uppercase;
+        }
+
+        .btn-add:hover {
+            background: var(--primary-red);
+            box-shadow: 0 0 15px var(--primary-red);
+        }
+
+        .table-scroll { 
+            width: 100%; 
+            overflow-x: auto; 
+            margin-top: 15px; 
+            -webkit-overflow-scrolling: touch; 
+        }
         
         table { width: 100%; border-collapse: collapse; min-width: 500px; text-align: left; }
         th { background: #800000; padding: 12px; }
@@ -117,9 +154,10 @@
             background: #2ecc71; 
             border: none; 
             color: white; 
-            padding: 6px 12px; 
+            padding: 8px 15px; 
             border-radius: 5px; 
             cursor: pointer; 
+            font-size: 14px;
         }
 
         select, input[type="file"], .manual-input { 
@@ -134,8 +172,11 @@
         }
 
         @media (max-width: 650px) { 
-            .login-right { clip-path: none; order: -1; min-height: 180px; } 
-            .container { margin: 10px; } 
+            .login-right { clip-path: none; order: -1; min-height: 180px; padding: 20px; } 
+            .login-left { padding: 20px; }
+            .container { width: 98%; margin: 5px auto; }
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .btn-glow { width: 100%; }
         }
     </style>
 </head>
@@ -158,7 +199,7 @@
 
         <div id="mainPage">
             <div class="header-nav">
-                <span>Smart Attendance system</span>
+                <span>Smart attendance System</span>
                 <button onclick="location.reload()" style="background:none; border:1px solid red; color:white; cursor:pointer; padding:5px 10px; border-radius:5px;">Logout</button>
             </div>
 
@@ -188,9 +229,9 @@
             </div>
 
             <div class="card" style="margin-top: 15px;">
-                <div style="display: flex; gap: 5px;">
-                    <input type="text" id="newName" class="manual-input" placeholder="Add student name manually" style="margin-top:0;">
-                    <button onclick="addNewStudent()" class="action-btn" style="background:red; font-weight:bold;">ADD</button>
+                <div class="add-student-container">
+                    <input type="text" id="newName" class="manual-input" placeholder="Add student name manually">
+                    <button onclick="addNewStudent()" class="btn-add">ADD</button>
                 </div>
             </div>
 
@@ -207,9 +248,9 @@
                 </table>
             </div>
 
-            <div style="margin-top: 20px; display: flex; gap: 10px; padding-bottom: 10px;">
-                <button class="btn-glow" onclick="exportToExcel()" style="flex: 2;">Download Attendance Report</button>
-                <button onclick="resetCenter()" style="flex: 1; background:none; border:none; color:#666; cursor:pointer; font-size:11px;">Clear Data</button>
+            <div style="margin-top: 20px; display: flex; gap: 10px; padding-bottom: 10px; flex-wrap: wrap;">
+                <button class="btn-glow" onclick="exportToExcel()" style="flex: 2; min-width: 200px;">Download Report</button>
+                <button onclick="resetCenter()" style="flex: 1; min-width: 100px; background:none; border:none; color:#666; cursor:pointer; font-size:11px;">Clear Data</button>
             </div>
         </div>
     </div>
@@ -260,7 +301,6 @@
                 const data = new Uint8Array(event.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
                 const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                // Matches the column named "الاسم"
                 currentStudents = jsonData.map(row => row["الاسم"]).filter(n => n);
                 localStorage.setItem(getStorageKey(), JSON.stringify(currentStudents));
                 loadCenterData();
