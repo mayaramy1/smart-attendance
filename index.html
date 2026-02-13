@@ -257,105 +257,118 @@
         </div>
     </div>
 
-    <script>
-        let currentStudents = [];
-        let sessionAttendance = {};
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-        function checkLogin() {
-            if(document.getElementById('username').value === "assistant" && document.getElementById('password').value === "assistant123") {
-                document.getElementById('loginPage').style.display = "none";
-                document.getElementById('mainPage').style.display = "flex";
-                loadCenterData();
-            } else { alert("Access Denied: Wrong Credentials"); }
+<script>
+    // 1. بيانات الربط (انسخيها من Settings -> API في Supabase)
+    const SUPABASE_URL = 'https://your-project-url.supabase.co';
+    const SUPABASE_KEY = 'your-anon-public-key';
+    
+    // بدء اتصال السحاب
+    const supabase = supabasejs.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // 2. دالة جلب البيانات من السحاب وعرضها
+    async function fetchData() {
+        const center = document.getElementById('centerSelect').value;
+        const grade = document.getElementById('gradeSelect').value;
+
+        const { data, error } = await supabase
+            .from('students')
+            .select('*')
+            .eq('center', center)
+            .eq('grade', grade);
+
+        if (error) {
+            console.error('Error fetching:', error);
+            return;
         }
 
-        function getStorageKey() {
-            return `${document.getElementById('centerSelect').value}_${document.getElementById('gradeSelect').value}`;
-        }
-
-        function loadCenterData() {
-            const key = getStorageKey();
-            const savedData = localStorage.getItem(key);
-            sessionAttendance = {}; 
-
-            if (savedData) {
-                currentStudents = JSON.parse(savedData);
-                document.getElementById('setupSection').style.opacity = "0.4";
-                currentStudents.forEach((name, index) => {
-                    sessionAttendance[index] = { 
-                        "Student Name": name, 
-                        "Status": "Absent", 
-                        "Year": document.getElementById('gradeSelect').value,
-                        "Date": new Date().toLocaleDateString()
-                    };
-                });
-                renderTable();
-            } else {
-                currentStudents = [];
-                document.getElementById('setupSection').style.opacity = "1";
-                renderTable();
-            }
-        }
-
-        document.getElementById('excelFile').addEventListener('change', function(e) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const data = new Uint8Array(event.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                currentStudents = jsonData.map(row => row["الاسم"]).filter(n => n);
-                localStorage.setItem(getStorageKey(), JSON.stringify(currentStudents));
-                loadCenterData();
-            };
-            reader.readAsArrayBuffer(e.target.files[0]);
+        const tbody = document.getElementById('studentsBody');
+        tbody.innerHTML = "";
+        data.forEach((student) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${student.name}</td>
+                <td class="${student.status === 'Present' ? 'status-present' : 'status-absent'}">${student.status}</td>
+                <td>
+                    <button class="action-btn" onclick="markPresent('${student.id}')" 
+                        ${student.status === 'Present' ? 'disabled style="opacity:0.3"' : ''}>
+                        ${student.status === 'Present' ? 'Done' : 'Mark Present'}
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
         });
+    }
 
-        function addNewStudent() {
-            const nameInput = document.getElementById('newName');
-            if (nameInput.value.trim() !== "") {
-                currentStudents.push(nameInput.value.trim());
-                localStorage.setItem(getStorageKey(), JSON.stringify(currentStudents));
+    // 3. تسجيل الحضور (تحديث السحاب)
+    async function markPresent(id) {
+        const { error } = await supabase
+            .from('students')
+            .update({ status: 'Present' })
+            .eq('id', id);
+
+        if (!error) fetchData(); // تحديث الجدول فوراً عند الجميع
+    }
+
+    // 4. إضافة طالب يدوي (أونلاين)
+    async function addNewStudent() {
+        const nameInput = document.getElementById('newName');
+        const name = nameInput.value.trim();
+        const center = document.getElementById('centerSelect').value;
+        const grade = document.getElementById('gradeSelect').value;
+
+        if (name) {
+            const { error } = await supabase
+                .from('students')
+                .insert([{ name, center, grade, status: 'Absent' }]);
+            
+            if (!error) {
                 nameInput.value = "";
-                loadCenterData();
+                fetchData();
             }
         }
+    }
 
-        function renderTable() {
-            const body = document.getElementById('studentsBody');
-            body.innerHTML = "";
-            currentStudents.forEach((name, index) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${name}</td>
-                    <td id="status-${index}" class="status-absent">Absent</td>
-                    <td><button id="btn-p-${index}" class="action-btn" onclick="markPresent(${index})">Mark Present</button></td>
-                `;
-                body.appendChild(tr);
-            });
-        }
+    // 5. رفع ملف إكسيل (أونلاين)
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+        const reader = new FileReader();
+        const center = document.getElementById('centerSelect').value;
+        const grade = document.getElementById('gradeSelect').value;
 
-        function markPresent(index) {
-            sessionAttendance[index].Status = "Present";
-            document.getElementById(`status-${index}`).innerText = "Present";
-            document.getElementById(`status-${index}`).className = "status-present";
-            document.getElementById(`btn-p-${index}`).disabled = true;
-            document.getElementById(`btn-p-${index}`).style.opacity = "0.3";
-            document.getElementById(`btn-p-${index}`).innerText = "Done";
-        }
+        reader.onload = async (event) => {
+            const data = new Uint8Array(event.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
-        function exportToExcel() {
-            const ws = XLSX.utils.json_to_sheet(Object.values(sessionAttendance));
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Attendance");
-            XLSX.writeFile(wb, `Report_${getStorageKey()}.xlsx`);
-        }
+            const newStudents = jsonData.map(row => ({
+                name: row["الاسم"] || row["Name"] || Object.values(row)[0],
+                center: center,
+                grade: grade,
+                status: 'Absent'
+            })).filter(s => s.name);
 
-        function resetCenter() {
-            if(confirm("Delete student list for this specific year/center?")) {
-                localStorage.removeItem(getStorageKey());
-                loadCenterData();
+            const { error } = await supabase.from('students').insert(newStudents);
+            if (!error) {
+                alert("تم رفع الأسماء للسحاب بنجاح!");
+                fetchData();
+            } else {
+                alert("حدث خطأ أثناء الرفع");
             }
-        }
-    </script>
+        };
+        reader.readAsArrayBuffer(e.target.files[0]);
+    });
+
+    // تشغيل الجلب عند فتح الصفحة أو تغيير الاختيارات
+    function checkLogin() {
+        if(document.getElementById('username').value === "admin" && document.getElementById('password').value === "123") {
+            document.getElementById('loginPage').style.display = "none";
+            document.getElementById('mainPage').style.display = "flex";
+            fetchData();
+        } else { alert("Wrong!"); }
+    }
+</script>
 </body>
 </html>
+
