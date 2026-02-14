@@ -338,15 +338,10 @@ async function exportToExcel() {
     const excelRows = [];
 
     tableRows.forEach(row => {
-        // سحب البيانات بناءً على الترتيب الجديد للأعمدة
         const name = row.cells[0].innerText;
-        // رقم الطالب في الخلية الثانية (index 1)
         const studentPhone = row.cells[1].querySelector('input').value || "";
-        // رقم ولي الأمر في الخلية الثالثة (index 2)
         const parentPhone = row.cells[2].querySelector('input').value || "";
-        // الحالة في الخلية الرابعة (index 3)
         const status = row.cells[3].innerText;
-        // الدرجة في الخلية الخامسة (index 4)
         const score = row.cells[4].querySelector('input').value || "0";
         
         const center = document.getElementById('centerSelect').value;
@@ -365,10 +360,24 @@ async function exportToExcel() {
     });
 
     const ws = XLSX.utils.json_to_sheet(excelRows);
+
+    // --- الجزء الجديد لتكبير الـ Boxes (الأعمدة) ---
+    const wscols = [
+        {wch: 30}, // عرض عمود الاسم (Student Name)
+        {wch: 20}, // عرض عمود رقم الطالب
+        {wch: 20}, // عرض عمود رقم ولي الأمر
+        {wch: 15}, // عرض عمود الحالة
+        {wch: 10}, // عرض عمود الدرجة
+        {wch: 20}, // عرض عمود السنتر
+        {wch: 15}, // عرض عمود السنة الدراسية
+        {wch: 15}  // عرض عمود التاريخ
+    ];
+    ws['!cols'] = wscols; 
+    // -------------------------------------------
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Attendance");
     
-    // تسمية الملف باسم السنتر والتاريخ لسهولة التنظيم
     const fileName = `Report_${document.getElementById('centerSelect').value}_${new Date().toLocaleDateString()}.xlsx`;
     XLSX.writeFile(wb, fileName);
 }
