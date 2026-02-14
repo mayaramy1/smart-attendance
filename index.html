@@ -52,7 +52,48 @@
         select, input[type="file"] { width: 100%; background: #000; color: white; border: 1px solid var(--primary-red); padding: 10px; margin-top: 5px; border-radius: 5px; cursor: pointer; }
 
         @media (max-width: 650px) { .login-right { clip-path: none; order: -1; min-height: 150px; padding: 20px; } }
+        .search-container {
+    margin-top: 15px;
+    position: relative;
+}
+
+    .search-input {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 0, 0, 0.3);
+        color: white;
+        padding: 12px 15px;
+        border-radius: 5px;
+        font-size: 16px;
+        box-sizing: border-box;
+        transition: 0.3s;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: var(--primary-red);
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.4);
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .search-input::placeholder {
+        color: #666;
+    }
+    .score-input {
+    width: 60px;
+    background: #000;
+    color: #ff4d4d;
+    border: 1px solid #333;
+    text-align: center;
+    border-radius: 4px;
+    padding: 5px;
+}
+.score-input:focus {
+    border-color: var(--primary-red);
+    outline: none;
+}
     </style>
+    
 </head>
 <body>
 
@@ -74,7 +115,7 @@
         <div id="mainPage">
             <div class="header-nav">
                 <span style="color: var(--primary-red); font-weight: bold;">smart attendance system</span>
-                <button onclick="location.reload()" style="background:none; border:1px solid red; color:white; cursor:pointer; padding:5px 10px; border-radius:5px;">Logout</button>
+                <button onclick="logoutAndReset()" style="background:none; border:1px solid red; color:white; cursor:pointer; padding:5px 10px; border-radius:5px;">Logout</button>
             </div>
 
             <div class="dashboard-grid">
@@ -110,13 +151,19 @@
                     <button onclick="addNewStudent()" class="btn-add">ADD STUDENT</button>
                 </div>
             </div>
-
+                <div class="search-container">
+                    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search by student name..." onkeyup="filterStudents()">
+                </div>
             <div class="table-scroll">
                 <table>
                     <thead>
                         <tr>
                             <th>Student Name</th>
+                            <th>Student phone</th>
+                            <th>parent phone</th>
                             <th>Status</th>
+                            <th>Score</th>
+                            
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -126,6 +173,7 @@
 
             <div style="margin-top: 20px; display: flex; gap: 10px; padding-bottom: 20px; flex-wrap: wrap;">
                 <button class="btn-glow" onclick="exportToExcel()" style="flex: 2; min-width: 200px;">Download Report (Excel) 📥</button>
+              
                 <button onclick="resetCenterData()" style="flex: 1; min-width: 100px; background:none; border:none; color:#555; cursor:pointer; font-size:12px;">Reset Data</button>
             </div>
         </div>
@@ -170,24 +218,42 @@
         }
 
         // رسم الجدول
-        function renderTable() {
-            const body = document.getElementById('studentsBody');
-            body.innerHTML = "";
-            currentStudents.forEach((st) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${st.name}</td>
-                    <td class="${st.status === 'Present' ? 'status-present' : 'status-absent'}">${st.status}</td>
-                    <td>
-                        <button class="action-btn" onclick="markPresent('${st.id}')" 
-                        ${st.status === 'Present' ? 'disabled' : ''}>
-                        ${st.status === 'Present' ? 'Done' : 'Mark Present'}
-                        </button>
-                    </td>
-                `;
-                body.appendChild(tr);
-            });
-        }
+       function renderTable() {
+    const body = document.getElementById('studentsBody');
+    body.innerHTML = "";
+    currentStudents.forEach((st) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${st.name}</td>
+            <td>
+                <input type="text" class="score-input" style="width:110px"
+                    value="${st.student_phone || ''}" 
+                    placeholder="01xxxx"
+                    onchange="updateField('${st.id}', 'student_phone', this.value)">
+            </td>
+            <td>
+                <input type="text" class="score-input" style="width:110px"
+                    value="${st.parent_phone || ''}" 
+                    placeholder="01xxxx"
+                    onchange="updateField('${st.id}', 'parent_phone', this.value)">
+            </td>
+            <td class="${st.status === 'Present' ? 'status-present' : 'status-absent'}">${st.status}</td>
+            <td>
+                <input type="text" class="score-input" style="width:60px"
+                    value="${st.score || ''}" 
+                    placeholder="--"
+                    onchange="updateField('${st.id}', 'score', this.value)">
+            </td>
+            <td>
+                <button class="action-btn" onclick="markPresent('${st.id}')" 
+                ${st.status === 'Present' ? 'disabled' : ''}>
+                ${st.status === 'Present' ? 'Done' : 'Mark Present'}
+                </button>
+            </td>
+        `;
+        body.appendChild(tr);
+    });
+}
 
         // تسجيل الحضور أونلاين
         async function markPresent(id) {
@@ -218,48 +284,94 @@
 
         // رفع ملف إكسيل للسحاب
         document.getElementById('excelFile').onchange = (e) => {
-            const reader = new FileReader();
-            reader.onload = async (ev) => {
-                const data = new Uint8Array(ev.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                
-                const center = document.getElementById('centerSelect').value;
-                const grade = document.getElementById('gradeSelect').value;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+        const data = new Uint8Array(ev.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+        
+        const center = document.getElementById('centerSelect').value;
+        const grade = document.getElementById('gradeSelect').value;
 
-                const newRows = json.map(r => ({
-                    name: r["الاسم"] || r["Name"] || Object.values(r)[0],
-                    center: center,
-                    grade: grade,
-                    status: 'Absent'
-                })).filter(x => x.name);
-
-                const { error } = await _supabase.from('students').insert(newRows);
-                if (!error) {
-                    alert("Uploaded to Cloud!");
-                    await loadCenterData();
-                }
-            };
-            reader.readAsArrayBuffer(e.target.files[0]);
-        };
-
-        // تحميل التقرير النهائي
-        async function exportToExcel() {
-            if (currentStudents.length === 0) return alert("No data!");
-            
-            const excelRows = currentStudents.map(st => ({
-                "Student Name": st.name,
-                "Status": st.status,
-                "Center": st.center,
-                "Year": st.grade,
-                "Date": new Date().toLocaleDateString()
-            }));
-
-            const ws = XLSX.utils.json_to_sheet(excelRows);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Attendance");
-            XLSX.writeFile(wb, `Report_${document.getElementById('centerSelect').value}.xlsx`);
+        const newRows = json.map(r => {
+    // دالة صغيرة لتنظيف الرقم وإضافة كود مصر 2
+    const formatPhone = (phone) => {
+        if (!phone) return "";
+        let p = phone.toString().trim();
+        // لو الرقم بيبدأ بـ 0، بنشيل الصفر ونحط 20
+        if (p.startsWith('0')) {
+            return '20' + p.substring(1);
         }
+        // لو الرقم مش بيبدأ بـ 20، بنضيفها له
+        if (!p.startsWith('20') && p.length >= 10) {
+            return '20' + p;
+        }
+        return p;
+    };
+
+    return {
+        name: r["الاسم"] || r["Name"] || Object.values(r)[0],
+        student_phone: formatPhone(r["رقم الطالب"] || r["Student Phone"] || r["Mobile"]),
+        parent_phone: formatPhone(r["رقم ولي الأمر"] || r["Parent Phone"]),
+        center: center,
+        grade: grade,
+        status: 'Absent',
+        score: '0'
+    };
+}).filter(x => x.name);
+        const { error } = await _supabase.from('students').insert(newRows);
+        if (!error) {
+            alert("تم رفع البيانات بنجاح شاملة أرقام التليفونات!");
+            await loadCenterData();
+        } else {
+            alert("خطأ أثناء الرفع: " + error.message);
+        }
+    };
+    reader.readAsArrayBuffer(e.target.files[0]);
+};
+        // تحميل التقرير النهائي
+        // تحميل التقرير النهائي بصيغة إكسل شامل الـ Score
+async function exportToExcel() {
+    const tableRows = document.querySelectorAll('#studentsBody tr');
+    if (tableRows.length === 0) return alert("No data to export!");
+
+    const excelRows = [];
+
+    tableRows.forEach(row => {
+        // سحب البيانات بناءً على الترتيب الجديد للأعمدة
+        const name = row.cells[0].innerText;
+        // رقم الطالب في الخلية الثانية (index 1)
+        const studentPhone = row.cells[1].querySelector('input').value || "";
+        // رقم ولي الأمر في الخلية الثالثة (index 2)
+        const parentPhone = row.cells[2].querySelector('input').value || "";
+        // الحالة في الخلية الرابعة (index 3)
+        const status = row.cells[3].innerText;
+        // الدرجة في الخلية الخامسة (index 4)
+        const score = row.cells[4].querySelector('input').value || "0";
+        
+        const center = document.getElementById('centerSelect').value;
+        const grade = document.getElementById('gradeSelect').value;
+
+        excelRows.push({
+            "Student Name": name,
+            "Student Phone": studentPhone,
+            "Parent Phone": parentPhone,
+            "Status": status,
+            "Score": score,
+            "Center": center,
+            "Year": grade,
+            "Date": new Date().toLocaleDateString()
+        });
+    });
+
+    const ws = XLSX.utils.json_to_sheet(excelRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Attendance");
+    
+    // تسمية الملف باسم السنتر والتاريخ لسهولة التنظيم
+    const fileName = `Report_${document.getElementById('centerSelect').value}_${new Date().toLocaleDateString()}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+}
 
         // مسح بيانات السنتر
         async function resetCenterData() {
@@ -270,6 +382,157 @@
                 await loadCenterData();
             }
         }
+        // دالة مسح بيانات السنتر المختار
+async function resetCenterData() {
+    const center = document.getElementById('centerSelect').value;
+    const grade = document.getElementById('gradeSelect').value;
+
+    if (confirm(`هل أنت متأكد من مسح جميع طلاب سنتر (${center})؟ لا يمكن التراجع عن هذا الإجراء.`)) {
+        const { error } = await _supabase
+            .from('students')
+            .delete()
+            .eq('center', center)
+            .eq('grade', grade);
+
+        if (error) {
+            alert("خطأ في المسح: " + error.message);
+        } else {
+            alert("تم مسح بيانات السنتر بنجاح");
+            await loadCenterData(); // تحديث الجدول ليظهر فارغاً
+        }
+    }
+}
+function filterStudents() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const rows = document.querySelectorAll('#studentsBody tr');
+
+    rows.forEach(row => {
+        const studentName = row.cells[0].textContent.toLowerCase();
+        if (studentName.includes(searchTerm)) {
+            row.style.display = ""; // إظهار
+        } else {
+            row.style.display = "none"; // إخفاء
+        }
+    });
+}
+async function logoutAndReset() {
+    const center = document.getElementById('centerSelect').value;
+    const grade = document.getElementById('gradeSelect').value;
+
+    if (confirm("هل تريد تسجيل الخروج وتصفير كشف الحضور والدرجات؟")) {
+        try {
+            // تحديث حالة الطلاب إلى Absent وتصفير الـ Score في Supabase
+            const { error } = await _supabase
+                .from('students')
+                .update({ 
+                    status: 'Absent', 
+                    score: '' // أو '0' حسب ما تفضلين في قاعدة بياناتك
+                })
+                .eq('center', center)
+                .eq('grade', grade);
+
+            if (error) {
+                console.error("Error resetting data:", error);
+                alert("حدث خطأ أثناء تصفير البيانات");
+            } else {
+                // إعادة تحميل الصفحة لتسجيل الخروج والبدء من جديد
+                location.reload(); 
+            }
+        } catch (err) {
+            console.error(err);
+            location.reload();
+        }
+    }
+}
+async function updateScore(id, newScore) {
+    const { error } = await _supabase
+        .from('students')
+        .update({ score: newScore }) // تأكدي أن الاسم هنا يطابق ما في Supabase تماماً
+        .eq('id', id);
+
+    if (error) {
+        console.log("Detailed Error:", error); // هذا السطر سيخبرنا في المتصفح ما المشكلة بالضبط
+        alert("Error: " + error.message); // سيظهر لكِ سبب الخطأ الحقيقي في الرسالة
+    }
+}
+
+const excelRows = currentStudents.map(st => ({
+    "Student Name": st.name,
+    "Status": st.status,
+    "Score": st.score || "N/A", // أضيفي هذا السطر
+    "Center": st.center,
+    "Year": st.grade,
+    "Date": new Date().toLocaleDateString()
+}));
+function sendWhatsApp(id) {
+    const student = currentStudents.find(st => st.id === id);
+    if (!student || !student.parent_phone) {
+        alert("يرجى التأكد من إضافة رقم ولي الأمر (يبدأ بكود الدولة مثل 2010...)");
+        return;
+    }
+
+    const name = student.name;
+    const score = student.score || "لم يتم رصد درجة";
+    const status = student.status === 'Present' ? "حضر اليوم" : "غائب";
+    
+    // نص الرسالة
+    const message = `تحية طيبة من مستر مؤمن محمد..%0Aنحيطكم علماً بأن الطالب: ${name}%0Aحالة الحضور: ${status}%0Aالدرجة: ${score}`;
+    
+    // فتح رابط واتساب
+    const whatsappUrl = `https://wa.me/${student.parent_phone}?text=${message}`;
+    window.open(whatsappUrl, '_blank');
+}
+
+// دالة لتحديث رقم ولي الأمر في السحاب
+async function updateParentPhone(id, phone) {
+    const { error } = await _supabase
+        .from('students')
+        .update({ parent_phone: phone })
+        .eq('id', id);
+    
+    if (error) alert("خطأ في حفظ الرقم: " + error.message);
+}
+async function updateField(id, fieldName, newValue) {
+    // تحديث المصفوفة المحلية فوراً
+    const student = currentStudents.find(s => s.id === id);
+    if (student) student[fieldName] = newValue;
+
+    // تحديث قاعدة البيانات
+    const updateData = {};
+    updateData[fieldName] = newValue;
+
+    const { error } = await _supabase
+        .from('students')
+        .update(updateData)
+        .eq('id', id);
+
+    if (error) {
+        alert("Error updating " + fieldName + ": " + error.message);
+    }
+}
+async function saveToHistory() {
+    if (currentStudents.length === 0) return alert("لا توجد بيانات لحفظها!");
+
+    if (confirm("هل تريد حفظ هذه البيانات كـ (سجل أسبوعي) لهذا السنتر؟")) {
+        // تحضير البيانات للإرسال للجدول التاريخي
+        const historyData = currentStudents.map(st => ({
+            student_name: st.name,
+            status: st.status,
+            score: st.score || "0",
+            center: st.center,
+            grade: st.grade,
+            week_date: new Date().toISOString().split('T')[0] // تاريخ اليوم بصيغة YYYY-MM-DD
+        }));
+
+        const { error } = await _supabase.from('attendance_history').insert(historyData);
+
+        if (!error) {
+            alert("تم حفظ السجل الأسبوعي بنجاح! يمكنك الآن رؤيته في صفحة التقارير.");
+        } else {
+            alert("خطأ في الحفظ: " + error.message);
+        }
+    }
+}
     </script>
 </body>
 </html>
